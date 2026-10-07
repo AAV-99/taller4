@@ -1,0 +1,46 @@
+{
+  "fecha_corte": "2026-10-07",
+  "actividades_publicadas": ["taller1", "quiz1", "taller2", "quiz2"],
+  "estudiantes": {
+    "alvaro_mutis": {
+      "ultimo_acceso": "2026-10-06",
+      "mensajes_foro": 4,
+      "entregas": [
+        {"actividad": "taller1", "entregado": true, "nota": 2.4, "conceptos_fallados": ["acumuladores", "indentacion"]},
+        {"actividad": "quiz1", "entregado": true, "nota": 2.7, "conceptos_fallados": ["return"]},
+        {"actividad": "taller2", "entregado": true, "nota": 3.0, "conceptos_fallados": ["return"]},
+        {"actividad": "quiz2", "entregado": true, "nota": 3.2, "conceptos_fallados": []}
+      ]
+    },
+    "jose_bedoya": {
+      "ultimo_acceso": "2026-10-07",
+      "mensajes_foro": 11,
+      "entregas": [
+        {"actividad": "taller1", "entregado": true, "nota": 4.8, "conceptos_fallados": []},
+        {"actividad": "quiz1", "entregado": true, "nota": 4.5, "conceptos_fallados": ["casos borde"]},
+        {"actividad": "taller2", "entregado": true, "nota": 4.6, "conceptos_fallados": []},
+        {"actividad": "quiz2", "entregado": true, "nota": 5.0, "conceptos_fallados": []}
+      ]
+    },
+    "kevin_genez": {
+      "ultimo_acceso": "2026-10-05",
+      "mensajes_foro": 3,
+      "entregas": [
+        {"actividad": "taller1", "entregado": true, "nota": 3.6, "conceptos_fallados": ["indices"]},
+        {"actividad": "quiz1", "entregado": true, "nota": 2.8, "conceptos_fallados": ["diccionarios"]},
+        {"actividad": "taller2", "entregado": true, "nota": 2.7, "conceptos_fallados": ["diccionarios", "indices"]},
+        {"actividad": "quiz2", "entregado": true, "nota": 2.5, "conceptos_fallados": ["diccionarios"]}
+      ]
+    },
+    "juan_amaya": {
+      "ultimo_acceso": "2026-09-23",
+      "mensajes_foro": 0,
+      "entregas": [
+        {"actividad": "taller1", "entregado": true, "nota": 3.2, "conceptos_fallados": ["casos borde"]},
+        {"actividad": "quiz1", "entregado": true, "nota": 3.0, "conceptos_fallados": []},
+        {"actividad": "taller2", "entregado": false, "nota": null, "conceptos_fallados": []},
+        {"actividad": "quiz2", "entregado": false, "nota": null, "conceptos_fallados": []}
+      ]
+    }
+  }
+}

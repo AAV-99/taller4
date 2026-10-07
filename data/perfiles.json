@@ -1,0 +1,68 @@
+{
+  "curso": {
+    "codigo": "FH1037",
+    "nombre": "Introducción a Python para Ciencia de Datos e IA",
+    "profesor": "Edwin Montoya"
+  },
+  "estudiantes": [
+    {
+      "id": "alvaro_mutis",
+      "nombre": "Alvaro Mutis",
+      "perfil": "Bajo nivel previo",
+      "nivel_previo": "bajo",
+      "ritmo": "lento",
+      "estilo_aprendizaje": "paso a paso, con analogías de la vida cotidiana y sin jerga técnica",
+      "participacion": "media",
+      "errores_frecuentes": [
+        "confunde print con return",
+        "inicializa los acumuladores dentro del ciclo",
+        "errores de indentación"
+      ],
+      "comportamiento_simulado": "Escribe con inseguridad, muestra intentos de código cortos con errores básicos y pide que le expliquen 'desde cero'."
+    },
+    {
+      "id": "jose_bedoya",
+      "nombre": "Jose Bedoya",
+      "perfil": "Buen nivel técnico",
+      "nivel_previo": "alto",
+      "ritmo": "rápido",
+      "estilo_aprendizaje": "conceptual y conciso; prefiere retos y preguntas que lo hagan pensar en casos borde y eficiencia",
+      "participacion": "alta",
+      "errores_frecuentes": [
+        "olvida casos borde como la lista vacía",
+        "sobreoptimiza antes de tener una versión correcta"
+      ],
+      "comportamiento_simulado": "Escribe con seguridad y vocabulario técnico, muestra código casi correcto y pregunta por alternativas o por qué falla un caso borde."
+    },
+    {
+      "id": "kevin_genez",
+      "nombre": "Kevin Genez",
+      "perfil": "Necesita ejemplos prácticos",
+      "nivel_previo": "medio",
+      "ritmo": "medio",
+      "estilo_aprendizaje": "aprende con ejemplos concretos y ejecutables distintos al ejercicio, y con la salida esperada",
+      "participacion": "media",
+      "errores_frecuentes": [
+        "falla repetidamente en diccionarios (KeyError, crea el diccionario dentro del ciclo)",
+        "IndexError por manejar mal los índices",
+        "busca atajos y pide la solución directa"
+      ],
+      "comportamiento_simulado": "Se frustra rápido, pide 'un ejemplo que funcione' y, cuando se bloquea, intenta que el tutor le entregue el código completo.",
+      "pide_solucion_en_turno": 2
+    },
+    {
+      "id": "juan_amaya",
+      "nombre": "Juan Amaya",
+      "perfil": "Participa poco",
+      "nivel_previo": "medio-bajo",
+      "ritmo": "irregular",
+      "estilo_aprendizaje": "mensajes muy cortos; responde mejor a preguntas guía concretas y a metas pequeñas",
+      "participacion": "baja",
+      "errores_frecuentes": [
+        "no entrega o entrega incompleto",
+        "no prueba su código antes de entregar"
+      ],
+      "comportamiento_simulado": "Escribe mensajes de una línea, sin código y con poca información; casi nunca pregunta por iniciativa propia."
+    }
+  ]
+}

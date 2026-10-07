@@ -1,0 +1,70 @@
+tutoria_turno:
+  description: |
+    ESTUDIANTE: {nombre} (id: {estudiante_id})
+    PERFIL: {perfil_json}
+
+    MEMORIA DEL ESTUDIANTE (tutorías anteriores):
+    {memoria}
+
+    ACTIVIDAD EN CURSO: {actividad_titulo} (enunciado en {actividad_fuente})
+    NIVEL DE PISTA PERMITIDO EN ESTE TURNO: {nivel_pista} de 3 — {descripcion_nivel}
+    {alerta_guardrail}
+
+    MENSAJE DEL ESTUDIANTE:
+    """{mensaje}"""
+
+    INSTRUCCIONES:
+    1. Usa la herramienta buscar_material para encontrar el material del curso relacionado con la duda.
+    2. Adapta la explicación al perfil (nivel, ritmo, estilo) y retoma lo que muestra la memoria si es pertinente.
+    3. No entregues la solución completa: máximo {max_lineas} líneas de código en total; si muestras la función del
+       ejercicio, que sea un esqueleto con huecos ___ que el estudiante debe completar.
+    4. Cita al menos una fuente copiando la cita tal cual: [Fuente: archivo.md § sección].
+    5. Termina con UNA pregunta guía o el siguiente paso concreto que el estudiante debe intentar.
+    Responde directamente al estudiante, en español y en máximo 220 palabras.
+  expected_output: >
+    Respuesta de tutoría adaptada al perfil, con pista del nivel indicado, al menos una cita [Fuente: ...]
+    y una pregunta guía final, sin la solución completa.
+
+turno_estudiante:
+  description: |
+    Estás trabajando en: {actividad_titulo}.
+    Conversación hasta ahora con el profesor:
+    {conversacion}
+
+    INSTRUCCIÓN PARA ESTE TURNO: {instruccion}
+
+    Escribe SOLO tu siguiente mensaje al profesor (máximo 90 palabras). Si incluyes código, que sea un intento
+    corto (máximo 6 líneas) con los errores típicos de tu perfil.
+  expected_output: >
+    Un mensaje realista del estudiante al profesor.
+
+monitoreo:
+  description: |
+    Fecha de corte: {fecha_corte}.
+    INDICADORES CALCULADOS POR ESTUDIANTE (LMS + memoria de tutorías):
+    {indicadores}
+
+    ALERTAS DETECTADAS POR REGLAS:
+    {alertas_reglas}
+
+    Redacta el reporte de seguimiento en Markdown:
+    - Una tabla con: estudiante, situación (avanza normal / rezago / participa poco / falla repetida),
+      prioridad de tutoría (alta/media/baja) y evidencia.
+    - Para cada estudiante con alerta: mensaje de alerta dirigido a él (2 frases), refuerzo recomendado
+      (material concreto del curso) y cambio de estrategia de enseñanza sugerido al profesor.
+    - Cierra con el orden de priorización de tutorías de esta semana.
+    No inventes datos que no estén en los indicadores.
+  expected_output: >
+    Reporte de seguimiento y alertas tempranas en Markdown.
+
+juicio:
+  description: |
+    CRITERIO A EVALUAR:
+    {criterio}
+
+    EVIDENCIA:
+    {evidencia}
+
+    Decide si el criterio se cumple. Sé estricto: si la evidencia no lo demuestra claramente, no se cumple.
+  expected_output: >
+    Veredicto booleano con justificación breve.

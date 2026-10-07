@@ -1,0 +1,23 @@
+[
+  {
+    "id": "taller2_ej1",
+    "titulo": "Taller 2 · Ejercicio 1 — calcular_promedio",
+    "fuente": "05_taller2_enunciado.md",
+    "funciones_objetivo": ["calcular_promedio"],
+    "conceptos": ["funciones", "acumuladores", "return", "casos borde"]
+  },
+  {
+    "id": "taller2_ej2",
+    "titulo": "Taller 2 · Ejercicio 2 — filtrar_aprobados",
+    "fuente": "05_taller2_enunciado.md",
+    "funciones_objetivo": ["filtrar_aprobados"],
+    "conceptos": ["listas", "condicionales", "parametros por defecto"]
+  },
+  {
+    "id": "taller2_ej3",
+    "titulo": "Taller 2 · Ejercicio 3 — contar_por_rango",
+    "fuente": "05_taller2_enunciado.md",
+    "funciones_objetivo": ["contar_por_rango"],
+    "conceptos": ["diccionarios", "condicionales", "contadores"]
+  }
+]
