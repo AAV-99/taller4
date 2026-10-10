@@ -6,7 +6,6 @@ authors = [{ name = "AAV-99" }]
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "crewai[google-genai,tools]>=1.15.17,<2.0.0",
-    "rank-bm25>=0.2.2",
     "streamlit>=1.40",
     "mcp>=1.0",
 ]

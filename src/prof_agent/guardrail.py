@@ -5,7 +5,10 @@ sobre la respuesta del AgenteProfesor:
   1. Ningún bloque de código puede sumar más de MAX_LINEAS_CODIGO líneas no vacías.
   2. Si un bloque define la función objetivo del ejercicio (p. ej. `def calcular_promedio(`),
      debe ser un esqueleto con huecos (`___`, `...`, `TODO`), no una implementación completa.
-  3. La respuesta debe citar al menos una fuente válida del corpus: [Fuente: archivo.md § sección].
+  3. La respuesta debe citar al menos una fuente válida: un documento del corpus local
+     [Fuente: archivo.md § sección] o una página de la lista predeterminada del temario
+     [Fuente: título — URL] (data/temario.json, leída con ScrapeWebsiteTool) o cualquier página de
+     docs.python.org obtenida con el servidor MCP python-docs-mcp-server.
 
 Si la respuesta incumple, CrewAI la devuelve al agente con el motivo (reintento). Si tras
 los reintentos sigue incumpliendo, se sanea: se eliminan los bloques problemáticos y se
@@ -16,7 +19,7 @@ from __future__ import annotations
 
 import re
 
-from .rag import fuentes_validas
+from .conocimiento import es_fuente_valida, normalizar_url
 
 MAX_LINEAS_CODIGO = 8
 MAX_REINTENTOS = 2
@@ -34,7 +37,9 @@ PATRONES_INTENTO_SOLUCION = [
 
 MARCADORES_ESQUELETO = re.compile(r"_{3,}|\.\.\.|TODO|# ?completa|# ?tu c[oó]digo", re.I)
 BLOQUE_CODIGO = re.compile(r"```[^\n]*\n(.*?)```", re.S)
-CITA = re.compile(r"\[Fuente:\s*([^\]§]+?)\s*(?:§[^\]]*)?\]")
+CITA = re.compile(r"\[Fuente:([^\]]*)\]")
+URL = re.compile(r"https?://[^\s\]\)»>]+")
+ARCHIVO = re.compile(r"[\w.-]+\.md")
 
 
 def es_intento_obtener_solucion(mensaje: str) -> bool:
@@ -43,7 +48,14 @@ def es_intento_obtener_solucion(mensaje: str) -> bool:
 
 
 def fuentes_citadas(texto: str) -> list[str]:
-    return sorted({m.strip() for m in CITA.findall(texto)})
+    """Fuentes dentro de las citas [Fuente: ...]: URLs normalizadas (sin #ancla) o archivos .md del corpus."""
+    fuentes = set()
+    for cita in CITA.findall(texto):
+        urls = URL.findall(cita)
+        fuentes.update(normalizar_url(u) for u in urls)
+        if not urls:
+            fuentes.update(ARCHIVO.findall(cita))
+    return sorted(fuentes)
 
 
 def _bloque_es_solucion(codigo: str, funciones_objetivo: list[str]) -> bool:
@@ -60,8 +72,8 @@ def verificar_respuesta(texto: str, funciones_objetivo: list[str]) -> list[str]:
         problemas.append(f"incluye {lineas} líneas de código (máximo {MAX_LINEAS_CODIGO})")
     if any(_bloque_es_solucion(b, funciones_objetivo) for b in bloques):
         problemas.append("implementa completa la función objetivo del ejercicio")
-    if not set(fuentes_citadas(texto)) & fuentes_validas():
-        problemas.append("no cita ninguna fuente del corpus con el formato [Fuente: archivo.md § sección]")
+    if not any(es_fuente_valida(f) for f in fuentes_citadas(texto)):
+        problemas.append("no cita ninguna fuente del curso: [Fuente: archivo.md § sección] o [Fuente: título — URL]")
     return problemas
 
 
@@ -74,7 +86,7 @@ def sanear(texto: str, funciones_objetivo: list[str], cita_respaldo: str) -> str
         return m.group(0)
 
     texto = BLOQUE_CODIGO.sub(reemplazar, texto)
-    if not set(fuentes_citadas(texto)) & fuentes_validas():
+    if not any(es_fuente_valida(f) for f in fuentes_citadas(texto)):
         texto += f"\n\nMaterial de apoyo: {cita_respaldo}"
     return texto
 
@@ -107,7 +119,8 @@ class GuardrailPedagogico:
             "Tu respuesta incumple el guardrail pedagógico: " + "; ".join(problemas) + ". "
             "Reescríbela completa: no entregues la solución (máximo "
             f"{MAX_LINEAS_CODIGO} líneas de código, y si muestras la función del ejercicio debe ser un "
-            "esqueleto con huecos ___), y cita al menos una fuente como [Fuente: archivo.md § sección].",
+            "esqueleto con huecos ___), y cita al menos una fuente que hayas consultado: [Fuente: archivo.md § "
+            "sección] (buscar_material) o [Fuente: título — URL] (herramientas leer_*).",
         )
 
     def como_funcion(self):

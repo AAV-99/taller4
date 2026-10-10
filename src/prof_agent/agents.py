@@ -11,7 +11,7 @@ from crewai import Agent
 from .guardrail import MAX_REINTENTOS, GuardrailPedagogico
 from .memory import MemoriaEstudiantes
 from .settings import MAX_RPM, MODEL_APOYO, cargar_curso, crear_llm
-from .tools import BuscarMaterialTool, ConsultarProgresoTool
+from .conocimiento import ConsultarProgresoTool, herramienta_rag, herramientas_docs, servidores_mcp
 
 CONFIG_DIR = Path(__file__).resolve().parent / "config"
 
@@ -64,7 +64,10 @@ def crear_profesor(memoria: MemoriaEstudiantes, guardrail: GuardrailPedagogico) 
         "profesor",
         {},
         llm=crear_llm(0.4),
-        tools=[BuscarMaterialTool(), ConsultarProgresoTool(memoria=memoria)],
+        # RagTool del corpus local + una ScrapeWebsiteTool por página oficial del temario (leer_<id>) + progreso
+        tools=[herramienta_rag(), *herramientas_docs(), ConsultarProgresoTool(memoria=memoria)],
+        # Servidor MCP externo python-docs-mcp-server: search_docs y get_docs (toda la doc. oficial de Python)
+        mcps=servidores_mcp(),
         guardrail=guardrail.como_funcion(),
         guardrail_max_retries=MAX_REINTENTOS,
         max_iter=5,

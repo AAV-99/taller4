@@ -6,19 +6,32 @@ tutoria_turno:
     MEMORIA DEL ESTUDIANTE (tutorías anteriores):
     {memoria}
 
-    ACTIVIDAD EN CURSO: {actividad_titulo} (enunciado en {actividad_fuente})
+    ACTIVIDAD EN CURSO: {actividad_titulo} (enunciado completo, pruebas y rúbrica en {actividad_fuente})
+    ENUNCIADO: {actividad_enunciado}
     NIVEL DE PISTA PERMITIDO EN ESTE TURNO: {nivel_pista} de 3 — {descripcion_nivel}
     {alerta_guardrail}
+
+    TUS FUENTES DE CONOCIMIENTO:
+    - buscar_material: RAG (RagTool) sobre los documentos propios del curso, escritos en INGLÉS (programa,
+      política de tutoría y honestidad académica, enunciado del Taller 2 con pruebas y rúbrica). Úsala para dudas
+      sobre el taller o las reglas. Escribe SIEMPRE la consulta en inglés (p. ej. "tutoring policy academic
+      honesty"); los fragmentos llegan en inglés y debes traducir al español lo que uses en tu respuesta.
+    - Documentación oficial (una herramienta leer_* por página). Úsala para explicar conceptos de Python.
+      Páginas sugeridas para esta actividad:
+    {paginas_sugeridas}
+    {fuente_mcp}
 
     MENSAJE DEL ESTUDIANTE:
     """{mensaje}"""
 
     INSTRUCCIONES:
-    1. Usa la herramienta buscar_material para encontrar el material del curso relacionado con la duda.
+    1. Consulta la fuente más pertinente: leer_* para un concepto de Python, buscar_material (consulta en inglés)
+       para el taller o la política del curso. Usa como máximo 3 herramientas en total (idealmente 1 o 2).
     2. Adapta la explicación al perfil (nivel, ritmo, estilo) y retoma lo que muestra la memoria si es pertinente.
     3. No entregues la solución completa: máximo {max_lineas} líneas de código en total; si muestras la función del
        ejercicio, que sea un esqueleto con huecos ___ que el estudiante debe completar.
-    4. Cita al menos una fuente copiando la cita tal cual: [Fuente: archivo.md § sección].
+    4. Cita lo que consultaste copiando la cita tal cual, sin traducirla: [Fuente: archivo.md § sección] para el
+       corpus del curso o [Fuente: título — URL § sección] para la documentación oficial, con la URL exacta.
     5. Termina con UNA pregunta guía o el siguiente paso concreto que el estudiante debe intentar.
     Responde directamente al estudiante, en español y en máximo 220 palabras.
   expected_output: >
@@ -47,11 +60,14 @@ monitoreo:
     ALERTAS DETECTADAS POR REGLAS:
     {alertas_reglas}
 
+    MATERIAL DEL CURSO (páginas oficiales del temario):
+    {material}
+
     Redacta el reporte de seguimiento en Markdown:
     - Una tabla con: estudiante, situación (avanza normal / rezago / participa poco / falla repetida),
       prioridad de tutoría (alta/media/baja) y evidencia.
     - Para cada estudiante con alerta: mensaje de alerta dirigido a él (2 frases), refuerzo recomendado
-      (material concreto del curso) y cambio de estrategia de enseñanza sugerido al profesor.
+      (una página concreta del material, con su URL) y cambio de estrategia de enseñanza sugerido al profesor.
     - Cierra con el orden de priorización de tutorías de esta semana.
     No inventes datos que no estén en los indicadores.
   expected_output: >

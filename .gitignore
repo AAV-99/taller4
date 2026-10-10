@@ -6,3 +6,4 @@ __pycache__/
 memory/
 memory_eval/
 logs/
+.rag_db/

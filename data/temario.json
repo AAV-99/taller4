@@ -1,0 +1,140 @@
+{
+  "curso": "FH1037 Introducción a Python para Ciencia de Datos e IA",
+  "unidades": [
+    {
+      "numero": 1,
+      "semanas": "1-3",
+      "titulo": "Variables, tipos de datos, operadores, entrada/salida y condicionales",
+      "temas": [
+        "variables",
+        "números y cadenas",
+        "operadores",
+        "print y f-strings",
+        "if / elif / else"
+      ],
+      "paginas": [
+        "py_introduccion",
+        "py_entrada_salida",
+        "py_control_flujo"
+      ]
+    },
+    {
+      "numero": 2,
+      "semanas": "4-5",
+      "titulo": "Estructuras de repetición, acumuladores y contadores",
+      "temas": [
+        "for",
+        "while",
+        "range",
+        "break y continue",
+        "acumuladores y contadores"
+      ],
+      "paginas": [
+        "py_control_flujo",
+        "py_introduccion"
+      ]
+    },
+    {
+      "numero": 3,
+      "semanas": "6-8",
+      "titulo": "Funciones",
+      "temas": [
+        "def",
+        "parámetros y argumentos por defecto",
+        "return vs print",
+        "docstrings",
+        "errores frecuentes"
+      ],
+      "paginas": [
+        "py_control_flujo",
+        "py_errores"
+      ]
+    },
+    {
+      "numero": 4,
+      "semanas": "9-11",
+      "titulo": "Listas, tuplas, diccionarios y comprensiones",
+      "temas": [
+        "listas y métodos",
+        "comprensiones de listas",
+        "tuplas",
+        "diccionarios",
+        "técnicas de iteración (items)"
+      ],
+      "paginas": [
+        "py_estructuras_datos",
+        "py_errores"
+      ]
+    },
+    {
+      "numero": 5,
+      "semanas": "12-14",
+      "titulo": "Introducción a pandas",
+      "temas": [
+        "Series y DataFrame",
+        "lectura de CSV",
+        "filtrado con máscaras",
+        "estadísticas y groupby"
+      ],
+      "paginas": [
+        "pandas_10min",
+        "pandas_filtrar",
+        "pandas_estadisticas"
+      ]
+    }
+  ],
+  "paginas": [
+    {
+      "id": "py_introduccion",
+      "titulo": "Tutorial de Python, 3. Una introducción informal a Python",
+      "url": "https://docs.python.org/es/3/tutorial/introduction.html",
+      "contenido": "números y operadores, cadenas, listas básicas, primeros pasos con while"
+    },
+    {
+      "id": "py_control_flujo",
+      "titulo": "Tutorial de Python, 4. Más herramientas para control de flujo",
+      "url": "https://docs.python.org/es/3/tutorial/controlflow.html",
+      "contenido": "if/elif/else, for, range(), break/continue, definición de funciones, return, argumentos por defecto, docstrings"
+    },
+    {
+      "id": "py_estructuras_datos",
+      "titulo": "Tutorial de Python, 5. Estructuras de datos",
+      "url": "https://docs.python.org/es/3/tutorial/datastructures.html",
+      "contenido": "métodos de listas, comprensiones de listas, tuplas, conjuntos, diccionarios, técnicas de iteración (items)"
+    },
+    {
+      "id": "py_entrada_salida",
+      "titulo": "Tutorial de Python, 7. Entrada y salida",
+      "url": "https://docs.python.org/es/3/tutorial/inputoutput.html",
+      "contenido": "f-strings, format(), formateo de números y lectura de archivos"
+    },
+    {
+      "id": "py_errores",
+      "titulo": "Tutorial de Python, 8. Errores y excepciones",
+      "url": "https://docs.python.org/es/3/tutorial/errors.html",
+      "contenido": "errores de sintaxis, excepciones (IndexError, KeyError, ZeroDivisionError), try/except"
+    },
+    {
+      "id": "pandas_10min",
+      "titulo": "pandas, 10 minutes to pandas",
+      "url": "https://pandas.pydata.org/docs/user_guide/10min.html",
+      "contenido": "Series, DataFrame, selección, operaciones básicas y groupby (en inglés)"
+    },
+    {
+      "id": "pandas_filtrar",
+      "titulo": "pandas, How do I select a subset of a DataFrame?",
+      "url": "https://pandas.pydata.org/docs/getting_started/intro_tutorials/03_subset_data.html",
+      "contenido": "selección de columnas y filtrado de filas con máscaras booleanas, & y | (en inglés)"
+    },
+    {
+      "id": "pandas_estadisticas",
+      "titulo": "pandas, How to calculate summary statistics",
+      "url": "https://pandas.pydata.org/docs/getting_started/intro_tutorials/06_calculate_statistics.html",
+      "contenido": "mean, describe, groupby y value_counts (en inglés)"
+    }
+  ],
+  "corpus_local": [
+    "01_course_syllabus.md",
+    "02_assignment2_statement.md"
+  ]
+}

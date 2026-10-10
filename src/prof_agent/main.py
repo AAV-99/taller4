@@ -7,12 +7,10 @@ from pathlib import Path
 from crewai.flow import Flow, listen, router, start
 from pydantic import BaseModel
 
-from . import rag
+from .conocimiento import cargar_fragmentos, paginas
 from .memory import MemoriaEstudiantes
-from .monitor import ejecutar_monitor
-from .scenarios import simular_acompanamiento
-from .settings import MEMORY_DIR, cargar_perfiles
-from .trace import nuevo_run, registrar
+from .escenarios import ejecutar_monitor, simular_acompanamiento
+from .settings import MEMORY_DIR, cargar_perfiles, nuevo_run, registrar
 
 ESCENARIOS = ("acompanamiento", "seguimiento", "demo")
 
@@ -38,9 +36,9 @@ class ProfAgentFlow(Flow[ProfAgentState]):
         if self.state.estudiante_id not in cargar_perfiles():
             raise ValueError(f"Estudiante '{self.state.estudiante_id}' no existe en data/perfiles.json")
         self.state.run_id = nuevo_run(self.state.escenario)
-        n = len(rag.cargar_fragmentos())
         registrar("flow_inicio", escenario=self.state.escenario, estudiante=self.state.estudiante_id,
-                  actividad=self.state.actividad_id, fragmentos_corpus=n)
+                  actividad=self.state.actividad_id, fragmentos_corpus=len(cargar_fragmentos()),
+                  paginas_temario=len(paginas()))
 
     @router(inicializar)
     def elegir_escenario(self):

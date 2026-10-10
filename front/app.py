@@ -4,7 +4,8 @@ app.py — Interfaz Streamlit del Sistema Tutorial Inteligente (prof_agent).
 A diferencia del front de VDI-streamlit (que usaba un flujo simulado), esta interfaz
 llama directamente a los agentes reales de CrewAI:
   - Tutoría en vivo: el usuario escribe como un estudiante (o lo genera el AgenteEstudiante)
-    y responde el AgenteProfesor con RAG, memoria y guardrail.
+    y responde el AgenteProfesor con el corpus local del curso (RAG), la documentación oficial
+    del temario (ScrapeWebsiteTool), memoria y guardrail.
   - Escenario 3 y 4: se ejecuta el Flow `ProfAgentFlow`.
   - Evaluación: corre los 5 casos de prueba.
 
@@ -17,16 +18,15 @@ import json
 import pandas as pd
 import streamlit as st
 
-from prof_agent import rag
+from prof_agent import conocimiento
+from prof_agent.escenarios import INSTRUCCIONES_TURNO, alertas_por_reglas, calcular_indicadores
 from prof_agent.evaluation import cargar_ultimo, ejecutar_evaluacion
 from prof_agent.main import ejecutar
 from prof_agent.memory import MemoriaEstudiantes
-from prof_agent.monitor import alertas_por_reglas, calcular_indicadores
-from prof_agent.scenarios import INSTRUCCIONES_TURNO
 from prof_agent.settings import (
-    CORPUS_DIR, MODEL, api_key_configurada, cargar_actividades, cargar_curso, cargar_lms, cargar_perfiles,
+    CORPUS_DIR, MODEL, api_key_configurada, cargar_actividades, cargar_curso, cargar_lms, cargar_perfiles, cargar_temario,
+    fijar_run, leer_traza, nuevo_run,
 )
-from prof_agent.trace import fijar_run, leer_traza, nuevo_run
 from prof_agent.tutoria import mensaje_estudiante, responder
 
 st.set_page_config(page_title="prof_agent — Tutor Inteligente", page_icon="👨‍🏫", layout="wide")
@@ -76,7 +76,7 @@ st.title("👨‍🏫 Sistema Tutorial Inteligente — AgenteProfesor y AgentesE
 
 tab_chat, tab_esc3, tab_esc4, tab_eval, tab_datos = st.tabs(
     ["💬 Tutoría en vivo", "🎭 Escenario 3 · Acompañamiento", "📈 Escenario 4 · Seguimiento",
-     "✅ Evaluación", "📚 Corpus, memoria y traza"]
+     "✅ Evaluación", "📚 Corpus, temario, memoria y traza"]
 )
 
 # ----------------------------------------------------------------------------
@@ -85,7 +85,8 @@ tab_chat, tab_esc3, tab_esc4, tab_eval, tab_datos = st.tabs(
 with tab_chat:
     st.caption(
         f"Escribe como **{perfil['nombre']}** o deja que el AgenteEstudiante genere el mensaje según su perfil. "
-        "El AgenteProfesor consulta el corpus (RAG), lee la memoria del estudiante y aplica el guardrail."
+        "El AgenteProfesor consulta el corpus del curso (RAG) y la documentación oficial del temario "
+        "(ScrapeWebsiteTool), lee la memoria del estudiante y aplica el guardrail."
     )
     historial = [i for i in memoria.cargar(estudiante_id)["interacciones"] if i["actividad"] == actividad_id]
     for it in historial:
@@ -216,16 +217,44 @@ with tab_eval:
 with tab_datos:
     col_a, col_b = st.columns(2)
     with col_a:
-        st.subheader("🔎 Probar el RAG (sin LLM)")
-        consulta = st.text_input("Consulta", "¿por qué mi función devuelve None?")
-        for f in rag.buscar(consulta, k=3):
-            with st.expander(f"{f.cita} · score {f.score:.2f}"):
-                st.markdown(f.texto)
-        st.subheader("📄 Corpus del curso")
-        doc = st.selectbox("Documento", sorted(p.name for p in CORPUS_DIR.glob("*.md")))
+        st.subheader("📚 Temario y páginas oficiales")
+        temario = cargar_temario()
+        st.dataframe(
+            pd.DataFrame([{"unidad": u["numero"], "semanas": u["semanas"], "tema": u["titulo"],
+                           "páginas": ", ".join(u["paginas"])} for u in temario["unidades"]]),
+            use_container_width=True, hide_index=True,
+        )
+        st.subheader("🌐 Probar ScrapeWebsiteTool (sin LLM)")
+        pagina_id = st.selectbox("Página", list(conocimiento.paginas()),
+                                 format_func=lambda p: conocimiento.paginas()[p]["titulo"])
+        st.caption(conocimiento.paginas()[pagina_id]["url"])
+        if st.button("Leer página"):
+            try:
+                with st.spinner("Descargando la página…"):
+                    texto = conocimiento.leer(pagina_id)
+                st.caption(f"{len(texto):,} caracteres leídos (el agente recibe la página completa)")
+                st.text(texto[:4000] + ("…" if len(texto) > 4000 else ""))
+            except Exception as exc:
+                st.error(f"No se pudo leer la página: {exc}")
+        st.subheader("🐍 Probar el servidor MCP python-docs (sin LLM)")
+        st.caption("Servidor MCP externo y gratuito `python-docs-mcp-server`: busca en toda la documentación "
+                   f"oficial de Python {conocimiento.VERSION_PYTHON_DOCS}.")
+        consulta_mcp = st.text_input("Símbolo o tema", "round")
+        if st.button("Buscar con search_docs"):
+            try:
+                with st.spinner("Consultando el servidor MCP…"):
+                    st.text(conocimiento.consultar_mcp_python_docs(
+                        "search_docs", {"query": consulta_mcp, "version": conocimiento.VERSION_PYTHON_DOCS})[:4000])
+            except Exception as exc:
+                st.error(f"No se pudo consultar el servidor MCP (¿índice creado?): {exc}")
+    with col_b:
+        st.subheader("🔎 Probar el RagTool del corpus local (sin LLM)")
+        consulta = st.text_input("Consulta (en inglés, como la hace el agente)", "can I ask for the complete solution of the assignment?")
+        with st.expander("Resultado del RagTool (lo que recibe el agente)", expanded=True):
+            st.text(conocimiento.buscar(consulta))
+        doc = st.selectbox("Documento del corpus", sorted(p.name for p in CORPUS_DIR.glob("*.md")))
         with st.expander("Ver documento"):
             st.markdown((CORPUS_DIR / doc).read_text(encoding="utf-8"))
-    with col_b:
         st.subheader(f"🧠 Memoria de {perfil['nombre']}")
         st.json(memoria.cargar(estudiante_id), expanded=False)
         st.subheader("🗂️ LMS simulado")
