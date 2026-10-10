@@ -6,8 +6,8 @@ llama directamente a los agentes reales de CrewAI:
   - Tutoría en vivo: el usuario escribe como un estudiante (o lo genera el AgenteEstudiante)
     y responde el AgenteProfesor con el corpus local del curso (RAG), la documentación oficial
     del temario (ScrapeWebsiteTool), memoria y guardrail.
-  - Escenario 3 y 4: se ejecuta el Flow `ProfAgentFlow`.
-  - Evaluación: corre los 5 casos de prueba.
+  - Escenario 3 (acompañamiento sin entregar la respuesta): se ejecuta el Flow `ProfAgentFlow`.
+  - Evaluación: corre los 3 casos de prueba.
 
 Ejecutar desde la raíz del proyecto:  uv run streamlit run front/app.py
 """
@@ -19,12 +19,12 @@ import pandas as pd
 import streamlit as st
 
 from prof_agent import conocimiento
-from prof_agent.escenarios import INSTRUCCIONES_TURNO, alertas_por_reglas, calcular_indicadores
+from prof_agent.acompanamiento import INSTRUCCIONES_TURNO
 from prof_agent.evaluation import cargar_ultimo, ejecutar_evaluacion
 from prof_agent.main import ejecutar
 from prof_agent.memory import MemoriaEstudiantes
 from prof_agent.settings import (
-    CORPUS_DIR, MODEL, api_key_configurada, cargar_actividades, cargar_curso, cargar_lms, cargar_perfiles, cargar_temario,
+    CORPUS_DIR, MODEL, api_key_configurada, cargar_actividades, cargar_curso, cargar_perfiles, cargar_temario,
     fijar_run, leer_traza, nuevo_run,
 )
 from prof_agent.tutoria import mensaje_estudiante, responder
@@ -74,9 +74,8 @@ with st.sidebar:
 
 st.title("👨‍🏫 Sistema Tutorial Inteligente — AgenteProfesor y AgentesEstudiante")
 
-tab_chat, tab_esc3, tab_esc4, tab_eval, tab_datos = st.tabs(
-    ["💬 Tutoría en vivo", "🎭 Escenario 3 · Acompañamiento", "📈 Escenario 4 · Seguimiento",
-     "✅ Evaluación", "📚 Corpus, temario, memoria y traza"]
+tab_chat, tab_esc3, tab_eval, tab_datos = st.tabs(
+    ["💬 Tutoría en vivo", "🎭 Escenario 3 · Acompañamiento", "✅ Evaluación", "📚 Corpus, temario, memoria y traza"]
 )
 
 # ----------------------------------------------------------------------------
@@ -138,17 +137,16 @@ with tab_esc3:
     st.markdown(
         "El **AgenteEstudiante** intenta resolver la actividad y muestra avances, errores o bloqueos; el "
         "**AgenteProfesor** responde con pistas graduales sin entregar la solución. Se ejecuta el "
-        "`ProfAgentFlow` con `escenario='acompanamiento'`."
+        "`ProfAgentFlow`."
     )
-    turnos = st.slider("Turnos", 1, 4, 3)
+    turnos = st.slider("Turnos", 1, 4, 2)
     if perfil.get("pide_solucion_en_turno"):
         st.info(f"Por su perfil, {perfil['nombre']} intentará obtener la solución en el turno "
                 f"{perfil['pide_solucion_en_turno']}.")
     if st.button(f"▶️ Simular acompañamiento de {perfil['nombre']}", type="primary"):
         try:
             with st.spinner("Agentes conversando… (≈ 2-3 llamadas al LLM por turno)"):
-                estado = ejecutar(escenario="acompanamiento", estudiante_id=estudiante_id,
-                                  actividad_id=actividad_id, turnos=turnos)
+                estado = ejecutar(estudiante_id=estudiante_id, actividad_id=actividad_id, turnos=turnos)
             st.session_state["esc3"] = estado.transcripcion
         except Exception as exc:
             error_llm(exc)
@@ -157,38 +155,14 @@ with tab_esc3:
         st.markdown(st.session_state["esc3"])
 
 # ----------------------------------------------------------------------------
-# 3. Escenario 4 — seguimiento y alertas (Flow)
-# ----------------------------------------------------------------------------
-with tab_esc4:
-    st.markdown(
-        "Indicadores calculados del LMS simulado (`data/lms.json`) y de la memoria de tutorías. Las reglas son "
-        "deterministas; el **AgenteMonitor** redacta alertas y acciones de acompañamiento."
-    )
-    indicadores = calcular_indicadores(memoria)
-    st.dataframe(pd.DataFrame(indicadores).drop(columns=["estudiante_id"]), use_container_width=True)
-    alertas = alertas_por_reglas(indicadores)
-    st.markdown("**Alertas por reglas**")
-    st.dataframe(pd.DataFrame(alertas).drop(columns=["estudiante_id"]) if alertas else pd.DataFrame(),
-                 use_container_width=True)
-    if st.button("▶️ Ejecutar AgenteMonitor", type="primary"):
-        try:
-            with st.spinner("El AgenteMonitor analiza el curso…"):
-                estado = ejecutar(escenario="seguimiento", estudiante_id=estudiante_id)
-            st.session_state["esc4"] = estado.reporte_monitor
-        except Exception as exc:
-            error_llm(exc)
-    if st.session_state.get("esc4"):
-        st.markdown(st.session_state["esc4"])
-
-# ----------------------------------------------------------------------------
-# 4. Evaluación
+# 3. Evaluación
 # ----------------------------------------------------------------------------
 with tab_eval:
     st.markdown(
-        "5 casos de prueba con criterio de éxito explícito (checklist determinista + LLM-as-judge). Usan una "
+        "3 casos de prueba con criterio de éxito explícito (checklist determinista + LLM-as-judge). Usan una "
         "memoria aislada (`memory_eval/`). Equivale a `uv run evaluar`."
     )
-    if st.button("▶️ Ejecutar evaluación (≈ 15 llamadas al LLM)", type="primary"):
+    if st.button("▶️ Ejecutar evaluación (≈ 10-12 llamadas al LLM)", type="primary"):
         try:
             with st.spinner("Ejecutando casos de prueba… puede tardar varios minutos."):
                 ejecutar_evaluacion()
@@ -212,7 +186,7 @@ with tab_eval:
         st.info("Aún no hay resultados de evaluación.")
 
 # ----------------------------------------------------------------------------
-# 5. Datos
+# 4. Datos
 # ----------------------------------------------------------------------------
 with tab_datos:
     col_a, col_b = st.columns(2)
@@ -257,8 +231,6 @@ with tab_datos:
             st.markdown((CORPUS_DIR / doc).read_text(encoding="utf-8"))
         st.subheader(f"🧠 Memoria de {perfil['nombre']}")
         st.json(memoria.cargar(estudiante_id), expanded=False)
-        st.subheader("🗂️ LMS simulado")
-        st.json(cargar_lms()["estudiantes"][estudiante_id], expanded=False)
     st.subheader("🧾 Traza (últimos 40 eventos de logs/trace.jsonl)")
     eventos = leer_traza()[-40:]
     if eventos:

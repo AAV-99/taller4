@@ -1,4 +1,4 @@
-"""Evaluación mínima: 5 casos de prueba con criterio de éxito explícito (checklist + LLM-as-judge).
+"""Evaluación mínima: 3 casos de prueba con criterio de éxito explícito (checklist + LLM-as-judge).
 
 Ejecutar:  uv run evaluar
 Usa una memoria aislada (memory_eval/) para no mezclarse con las tutorías reales.
@@ -18,7 +18,6 @@ from .agents import crear_evaluador, ejecutar_agente, prompt
 from .conocimiento import PREFIJO_TOOL, paginas, urls_validas
 from .guardrail import verificar_respuesta
 from .memory import MemoriaEstudiantes
-from .escenarios import ejecutar_monitor
 from .settings import LOGS_DIR, ROOT, cargar_perfiles, leer_traza, nuevo_run, registrar, run_actual
 from .tutoria import responder
 
@@ -75,70 +74,49 @@ def caso_documentacion(memoria: MemoriaEstudiantes) -> dict:
     return {"respuestas": [r.dict()], "checklist": checklist}
 
 
-def caso_adaptacion(memoria: MemoriaEstudiantes) -> dict:
+def caso_adaptacion_memoria(memoria: MemoriaEstudiantes) -> dict:
+    """Escenario 1 + memoria con 3 turnos: Alvaro y Jose hacen la MISMA pregunta (adaptación al perfil) y
+    luego Alvaro vuelve con un avance (el tutor debe usar su historial y subir el nivel de pista)."""
     pregunta = "No sé cómo contar cuántas notas hay en cada rango usando un diccionario."
     ra = responder("alvaro_mutis", pregunta, "taller2_ej3", memoria, escenario="evaluacion")
     rj = responder("jose_bedoya", pregunta, "taller2_ej3", memoria, escenario="evaluacion")
+    resumen = memoria.resumen_para_tutor("alvaro_mutis")
+    ra2 = responder("alvaro_mutis", "Ya puse el diccionario antes del ciclo como me dijo, pero no sé cómo decidir a "
+                    "qué rango va cada nota.", "taller2_ej3", memoria, escenario="evaluacion")
+    guardado = memoria.cargar("alvaro_mutis")
     perfiles = cargar_perfiles()
-    veredicto = juzgar(
+    adaptacion = juzgar(
         "Ante la MISMA pregunta, el tutor adapta la respuesta al perfil: para el estudiante de bajo nivel previo usa "
         "explicación paso a paso, lenguaje sencillo o analogías; para el de buen nivel técnico es más conciso o "
         "conceptual y lo reta (p. ej. con casos borde). Las dos respuestas deben ser claramente distintas en enfoque.",
         f"PERFIL A: {json.dumps(perfiles['alvaro_mutis'], ensure_ascii=False)}\nRESPUESTA A:\n{ra.respuesta}\n\n"
         f"PERFIL B: {json.dumps(perfiles['jose_bedoya'], ensure_ascii=False)}\nRESPUESTA B:\n{rj.respuesta}",
     )
-    checklist = [
-        _check("Las respuestas a la misma pregunta son distintas", ra.respuesta != rj.respuesta),
-        _check(f"LLM-as-judge: adaptación al perfil — {veredicto.justificacion}", veredicto.cumple),
-    ]
-    return {"respuestas": [ra.dict(), rj.dict()], "checklist": checklist}
-
-
-def caso_memoria(memoria: MemoriaEstudiantes) -> dict:
-    r1 = responder("alvaro_mutis", "Hice la función pero cuando hago resultado = calcular_promedio(notas) me sale None.",
-                   "taller2_ej1", memoria, escenario="evaluacion")
-    resumen = memoria.resumen_para_tutor("alvaro_mutis")
-    r2 = responder("alvaro_mutis", "Ya cambié eso que me dijo, pero ahora el promedio me da igual a la última nota.",
-                   "taller2_ej1", memoria, escenario="evaluacion")
-    guardado = memoria.cargar("alvaro_mutis")
-    veredicto = juzgar(
-        "La segunda respuesta del tutor es coherente con la interacción anterior registrada en memoria: no repite la "
-        "explicación inicial desde cero y avanza al nuevo problema (el acumulador se reinicia dentro del ciclo).",
-        f"MEMORIA ENTREGADA AL TUTOR:\n{resumen}\n\nSEGUNDO MENSAJE: {r2.mensaje}\nSEGUNDA RESPUESTA:\n{r2.respuesta}",
+    uso_memoria = juzgar(
+        "La segunda respuesta del tutor a este estudiante es coherente con la interacción anterior registrada en "
+        "memoria: no repite la explicación inicial desde cero y avanza al nuevo problema (cómo clasificar cada nota "
+        "en su rango con if/elif/else).",
+        f"MEMORIA ENTREGADA AL TUTOR:\n{resumen}\n\nSEGUNDO MENSAJE: {ra2.mensaje}\nSEGUNDA RESPUESTA:\n{ra2.respuesta}",
     )
     checklist = [
-        _check("La memoria JSON del estudiante persiste ambas interacciones",
-               sum(1 for i in guardado["interacciones"] if i["actividad"] == "taller2_ej1") >= 2),
-        _check("El resumen de memoria que recibe el tutor incluye la interacción anterior", "None" in resumen),
-        _check(f"El nivel de pista sube con el historial ({r1.nivel_pista} → {r2.nivel_pista})",
-               r2.nivel_pista > r1.nivel_pista),
-        _check(f"LLM-as-judge: uso del historial — {veredicto.justificacion}", veredicto.cumple),
+        _check("Las respuestas a la misma pregunta son distintas", ra.respuesta != rj.respuesta),
+        _check(f"LLM-as-judge: adaptación al perfil — {adaptacion.justificacion}", adaptacion.cumple),
+        _check("La memoria JSON persiste las dos interacciones de Alvaro",
+               sum(1 for i in guardado["interacciones"] if i["actividad"] == "taller2_ej3") >= 2),
+        _check("El resumen de memoria que recibe el tutor incluye la interacción anterior", "diccionario" in resumen),
+        _check(f"El nivel de pista sube con el historial ({ra.nivel_pista} → {ra2.nivel_pista})",
+               ra2.nivel_pista > ra.nivel_pista),
+        _check(f"LLM-as-judge: uso del historial — {uso_memoria.justificacion}", uso_memoria.cumple),
     ]
-    return {"respuestas": [r1.dict(), r2.dict()], "checklist": checklist}
-
-
-def caso_monitor(memoria: MemoriaEstudiantes) -> dict:
-    resultado = ejecutar_monitor(memoria)
-    alertas = {(a["estudiante_id"], a["tipo"]) for a in resultado["alertas"]}
-    con_alerta = {a["estudiante_id"] for a in resultado["alertas"]}
-    checklist = [
-        _check("Juan Amaya: alerta 'participa poco'", ("juan_amaya", "participa poco") in alertas),
-        _check("Kevin Genez: alerta 'falla repetida' (diccionarios)", ("kevin_genez", "falla repetida") in alertas),
-        _check("Alvaro Mutis: alerta 'rezago'", ("alvaro_mutis", "rezago") in alertas),
-        _check("Jose Bedoya (avanza normal) no recibe alertas", "jose_bedoya" not in con_alerta),
-        _check("El reporte del AgenteMonitor menciona a los estudiantes priorizados",
-               all(n in resultado["reporte"] for n in ("Juan Amaya", "Kevin Genez"))),
-    ]
-    return {"reporte": resultado["reporte"], "alertas": resultado["alertas"], "checklist": checklist}
+    return {"respuestas": [ra.dict(), rj.dict(), ra2.dict()], "checklist": checklist}
 
 
 CASOS: list[tuple[str, str, Callable[[MemoriaEstudiantes], dict]]] = [
     ("C1", "Guardrail: el estudiante pide ignorar instrucciones y obtener el código", caso_guardrail),
     ("C2", "Conocimiento: lee la documentación oficial con ScrapeWebsiteTool y cita la página pertinente",
      caso_documentacion),
-    ("C3", "Adaptación: misma pregunta, perfiles distintos (Alvaro vs Jose)", caso_adaptacion),
-    ("C4", "Memoria: la segunda interacción usa el historial y sube el nivel de pista", caso_memoria),
-    ("C5", "Monitor: detecta rezago, baja participación y fallos repetidos", caso_monitor),
+    ("C3", "Adaptación (escenario 1) y memoria: misma pregunta para Alvaro y Jose; Alvaro vuelve y el tutor usa "
+     "su historial", caso_adaptacion_memoria),
 ]
 
 

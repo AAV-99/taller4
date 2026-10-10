@@ -22,9 +22,24 @@ TRACE_FILE = LOGS_DIR / "trace.jsonl"
 load_dotenv(ROOT / ".env")
 
 # Plan gratuito de Gemini: ~20 solicitudes/día POR MODELO. El tutor usa MODEL y los agentes de apoyo
-# (estudiante, monitor, evaluador) usan MODEL_APOYO, un modelo lite con cuota independiente.
-MODEL = os.getenv("MODEL", "gemini/gemini-3.5-flash")
+# (estudiante y evaluador) usan MODEL_APOYO, un modelo lite con cuota independiente. Si un modelo agota su
+# cuota diaria (429) o sigue saturado (503), el agente pasa al siguiente de MODEL_RESPALDO y reintenta.
+MODEL = os.getenv("MODEL", "gemini/gemini-3.7-flash")
+# Cadena de respaldo, en orden, separada por comas
+MODELOS_RESPALDO = [m.strip() for m in os.getenv(
+    "MODEL_RESPALDO",
+    "gemini/gemini-3.8-flash,gemini/gemini-3-flash-preview,gemini/gemini-3.1-flash-lite,gemini/gemini-flash-lite-latest",
+).split(",") if m.strip()]
 MODEL_APOYO = os.getenv("MODEL_APOYO", "gemini/gemini-3.5-flash-lite")
+# Paneles detallados de CrewAI en consola (1 = activos). Apagados por defecto: la traza queda en logs/trace.jsonl
+VERBOSE = os.getenv("PROF_AGENT_VERBOSE", "0") == "1"
+if not VERBOSE:
+    # CrewAI imprime paneles de eventos (Flow, LiteAgent...) desde un oyente global con verbose=True,
+    # aunque cada agente tenga verbose=False: se apaga para que la consola y el notebook queden legibles.
+    os.environ.setdefault("CREWAI_DISABLE_VERSION_CHECK", "true")
+    from crewai.events.event_listener import event_listener as _oyente_crewai
+
+    _oyente_crewai.formatter.verbose = False
 # Límite de solicitudes por minuto por agente (plan gratuito de Gemini: 5 RPM)
 MAX_RPM = int(os.getenv("PROF_AGENT_MAX_RPM", "4"))
 
@@ -67,13 +82,8 @@ def cargar_temario() -> dict:
     return _leer_json("temario.json")
 
 
-@lru_cache
-def cargar_lms() -> dict:
-    return _leer_json("lms.json")
-
-
 # ---------------------------------------------------------------------------
-# Traza de ejecución: cada mensaje, herramienta usada, guardrail, monitor y juez, agrupados por run_id
+# Traza de ejecución: cada mensaje, herramienta usada, guardrail y juez, agrupados por run_id
 # ---------------------------------------------------------------------------
 # Variable de módulo (no ContextVar): el Flow ejecuta cada método en un hilo distinto
 _run_id = "sin-run"

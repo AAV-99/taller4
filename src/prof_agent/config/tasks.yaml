@@ -26,7 +26,8 @@ tutoria_turno:
 
     INSTRUCCIONES:
     1. Consulta la fuente más pertinente: leer_* para un concepto de Python, buscar_material (consulta en inglés)
-       para el taller o la política del curso. Usa como máximo 3 herramientas en total (idealmente 1 o 2).
+       para el taller o la política del curso. Consulta UNA sola fuente por turno: una herramienta (buscar_material
+       o una leer_*) o el servidor MCP (search_docs y luego get_docs). Cada consulta extra gasta cuota.
     2. Adapta la explicación al perfil (nivel, ritmo, estilo) y retoma lo que muestra la memoria si es pertinente.
     3. No entregues la solución completa: máximo {max_lineas} líneas de código en total; si muestras la función del
        ejercicio, que sea un esqueleto con huecos ___ que el estudiante debe completar.
@@ -50,28 +51,6 @@ turno_estudiante:
     corto (máximo 6 líneas) con los errores típicos de tu perfil.
   expected_output: >
     Un mensaje realista del estudiante al profesor.
-
-monitoreo:
-  description: |
-    Fecha de corte: {fecha_corte}.
-    INDICADORES CALCULADOS POR ESTUDIANTE (LMS + memoria de tutorías):
-    {indicadores}
-
-    ALERTAS DETECTADAS POR REGLAS:
-    {alertas_reglas}
-
-    MATERIAL DEL CURSO (páginas oficiales del temario):
-    {material}
-
-    Redacta el reporte de seguimiento en Markdown:
-    - Una tabla con: estudiante, situación (avanza normal / rezago / participa poco / falla repetida),
-      prioridad de tutoría (alta/media/baja) y evidencia.
-    - Para cada estudiante con alerta: mensaje de alerta dirigido a él (2 frases), refuerzo recomendado
-      (una página concreta del material, con su URL) y cambio de estrategia de enseñanza sugerido al profesor.
-    - Cierra con el orden de priorización de tutorías de esta semana.
-    No inventes datos que no estén en los indicadores.
-  expected_output: >
-    Reporte de seguimiento y alertas tempranas en Markdown.
 
 juicio:
   description: |

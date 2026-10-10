@@ -25,17 +25,6 @@ estudiante:
     Eres {nombre}, estudiante del curso {curso}. {comportamiento_simulado} Escribes en primera persona,
     en español coloquial, como lo haría un estudiante real en el chat de tutoría del curso.
 
-monitor:
-  role: >
-    AgenteMonitor — analista de seguimiento académico del curso {curso}
-  goal: >
-    Detectar a tiempo a los estudiantes en riesgo (rezago, baja participación, fallos repetidos en los mismos
-    conceptos o intentos de obtener soluciones) y proponer acciones de acompañamiento priorizadas.
-  backstory: >
-    Trabajas con el profesor Edwin Montoya revisando el LMS y las memorias de tutoría. Tus alertas son
-    concretas, basadas en evidencia y accionables: mensaje de alerta, refuerzo recomendado, cambio de
-    estrategia de enseñanza y prioridad de tutoría.
-
 evaluador:
   role: >
     AgenteEvaluador — juez pedagógico (LLM-as-judge)

@@ -1,5 +1,5 @@
-"""Servidor MCP (bonificación): expone el RAG del corpus local, el temario, la lectura de páginas
-oficiales y consultar_progreso.
+"""Servidor MCP propio (bonificación): expone el RAG del corpus local, el temario y la lectura de
+páginas oficiales.
 
 Ejecutar (stdio):  uv run mcp_server
 Probar con el inspector:  npx @modelcontextprotocol/inspector uv run mcp_server
@@ -7,7 +7,6 @@ Probar con el inspector:  npx @modelcontextprotocol/inspector uv run mcp_server
 from mcp.server.fastmcp import FastMCP
 
 from . import conocimiento
-from .memory import MemoriaEstudiantes
 
 mcp = FastMCP("prof_agent")
 
@@ -32,12 +31,6 @@ def leer_material(pagina_id: str, inicio: int = 0, max_caracteres: int = 8000) -
         return f"Página desconocida. Ids válidos: {', '.join(conocimiento.paginas())}"
     texto = conocimiento.leer(pagina_id)
     return f"{conocimiento.cita(pagina_id)}\n{texto[inicio:inicio + max_caracteres]}"
-
-
-@mcp.tool()
-def consultar_progreso(estudiante_id: str) -> str:
-    """Devuelve notas, entregas, participación y memoria de tutorías de un estudiante (p. ej. 'alvaro_mutis')."""
-    return conocimiento.progreso_estudiante(estudiante_id, MemoriaEstudiantes())
 
 
 def main():

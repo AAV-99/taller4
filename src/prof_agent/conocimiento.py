@@ -3,8 +3,7 @@
 1. buscar_material: RagTool (RAG oficial de crewai_tools) sobre el corpus local del curso
    (data/corpus/*.md, en INGLÉS): programa del curso y enunciado del Taller 2.
 2. leer_<id>: una ScrapeWebsiteTool (crewai_tools) por página oficial del temario (data/temario.json).
-3. consultar_progreso: notas y entregas del LMS simulado + memoria de tutorías.
-4. search_docs / get_docs: servidor MCP externo y gratuito `python-docs-mcp-server`, que busca en
+3. search_docs / get_docs: servidor MCP externo y gratuito `python-docs-mcp-server`, que busca en
    TODA la documentación oficial de Python (índice local, sin API key). Se conecta con
    Agent(mcps=[MCPServerStdio(...)]), el soporte nativo de MCP de CrewAI.
 
@@ -19,21 +18,18 @@ import asyncio
 import os
 import re
 import shutil
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Type
 
 from chromadb.config import Settings
 from crewai.events import ToolUsageFinishedEvent, crewai_event_bus
 from crewai.mcp import MCPServerStdio
 from crewai.mcp.filters import create_static_tool_filter
-from crewai.tools import BaseTool
 from crewai_tools import RagTool, ScrapeWebsiteTool
-from pydantic import BaseModel, ConfigDict, Field
 
-from .memory import MemoriaEstudiantes
-from .settings import CORPUS_DIR, ROOT, cargar_lms, cargar_perfiles, cargar_temario, registrar
+from .settings import CORPUS_DIR, LOGS_DIR, ROOT, cargar_temario, registrar
 
 # ===========================================================================
 # 1. RAG del corpus local (RagTool)
@@ -184,7 +180,7 @@ def listado_para_prompt(pagina_ids: list[str]) -> str:
 
 
 # ===========================================================================
-# 4. Servidor MCP externo: python-docs-mcp-server (toda la documentación oficial de Python)
+# 3. Servidor MCP externo: python-docs-mcp-server (toda la documentación oficial de Python)
 # ===========================================================================
 # Instalación (una vez):  uv tool install python-docs-mcp-server
 #                         python-docs-mcp-server build-index --versions 3.13
@@ -214,8 +210,33 @@ def servidor_mcp_python_docs() -> MCPServerStdio:
     )
 
 
+@lru_cache
+def _errlog_mcp():
+    """Dónde escribe el servidor MCP sus mensajes de error. En Jupyter, sys.stderr no tiene un descriptor de
+    archivo real y Windows no puede pasárselo al subproceso: se usa logs/mcp_stderr.log."""
+    try:
+        sys.stderr.fileno()
+        return sys.stderr
+    except (AttributeError, OSError, ValueError):
+        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        return open(LOGS_DIR / "mcp_stderr.log", "a", encoding="utf-8")
+
+
+def _preparar_stdio_mcp() -> None:
+    # CrewAI llama a stdio_client(...) sin errlog, y el SDK de MCP fija por defecto el sys.stderr que había al
+    # importarse. Se reemplaza ese valor por defecto para que el servidor arranque también dentro de Jupyter.
+    from mcp.client import stdio
+
+    original = getattr(stdio.stdio_client, "__wrapped__", None)
+    if original is not None and original.__defaults__:
+        original.__defaults__ = (_errlog_mcp(),)
+
+
 def servidores_mcp() -> list[MCPServerStdio]:
-    return [servidor_mcp_python_docs()] if MCP_PYTHON_DOCS_ACTIVO else []
+    if not MCP_PYTHON_DOCS_ACTIVO:
+        return []
+    _preparar_stdio_mcp()
+    return [servidor_mcp_python_docs()]
 
 
 def instrucciones_mcp() -> str:
@@ -243,7 +264,8 @@ def consultar_mcp_python_docs(herramienta: str, argumentos: dict) -> str:
     comando, args = _parametros_mcp()
 
     async def _llamar() -> str:
-        async with stdio_client(StdioServerParameters(command=comando, args=args)) as (leer_, escribir):
+        parametros = StdioServerParameters(command=comando, args=args)
+        async with stdio_client(parametros, errlog=_errlog_mcp()) as (leer_, escribir):
             async with ClientSession(leer_, escribir) as sesion:
                 await sesion.initialize()
                 resultado = await sesion.call_tool(herramienta, argumentos)
@@ -259,44 +281,6 @@ def es_fuente_valida(fuente: str) -> bool:
     """Lo que el guardrail acepta como cita: archivos del corpus local, URLs del temario o cualquier
     página de la documentación oficial de Python (lo que devuelve el servidor MCP)."""
     return fuente in fuentes_corpus() or fuente in urls_validas() or fuente.startswith(URL_DOCS_PYTHON)
-
-
-# ===========================================================================
-# 3. Progreso del estudiante (LMS simulado + memoria)
-# ===========================================================================
-def progreso_estudiante(estudiante_id: str, memoria: MemoriaEstudiantes) -> str:
-    perfil = cargar_perfiles().get(estudiante_id)
-    lms = cargar_lms()["estudiantes"].get(estudiante_id)
-    if not perfil or not lms:
-        return f"No existe el estudiante '{estudiante_id}'. Ids válidos: {', '.join(cargar_perfiles())}."
-    lineas = [f"Estudiante: {perfil['nombre']} ({perfil['perfil']})", "Entregas en el LMS:"]
-    for e in lms["entregas"]:
-        estado = f"nota {e['nota']}" if e["entregado"] else "NO ENTREGADO"
-        fallos = f" · conceptos fallados: {', '.join(e['conceptos_fallados'])}" if e["conceptos_fallados"] else ""
-        lineas.append(f"- {e['actividad']}: {estado}{fallos}")
-    lineas.append(f"Último acceso: {lms['ultimo_acceso']} · mensajes en foro: {lms['mensajes_foro']}")
-    lineas.append("Memoria de tutorías:\n" + memoria.resumen_para_tutor(estudiante_id))
-    return "\n".join(lineas)
-
-
-class ConsultarProgresoInput(BaseModel):
-    estudiante_id: str = Field(..., description="Id del estudiante, p. ej. 'alvaro_mutis'")
-
-
-class ConsultarProgresoTool(BaseTool):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    name: str = "consultar_progreso"
-    description: str = (
-        "Consulta las notas, entregas y participación del estudiante en el LMS y el resumen de sus "
-        "tutorías anteriores (memoria)."
-    )
-    args_schema: Type[BaseModel] = ConsultarProgresoInput
-    memoria: MemoriaEstudiantes
-
-    def _run(self, estudiante_id: str) -> str:
-        registrar("tool_consultar_progreso", estudiante_id=estudiante_id)
-        return progreso_estudiante(estudiante_id, self.memoria)
 
 
 # ===========================================================================
