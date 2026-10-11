@@ -20,6 +20,7 @@ import re
 import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -189,6 +190,7 @@ MCP_PYTHON_DOCS_ACTIVO = os.getenv("PROF_AGENT_MCP_PYTHON_DOCS", "1") == "1"
 VERSION_PYTHON_DOCS = "3.13"
 HERRAMIENTAS_MCP = ["search_docs", "get_docs"]  # el servidor expone 6; el tutor solo necesita estas
 URL_DOCS_PYTHON = "https://docs.python.org/"
+TIMEOUT_MCP_S = 60  # límite de la consulta directa al servidor MCP (sin LLM)
 
 
 def _parametros_mcp() -> tuple[str, list[str]]:
@@ -257,7 +259,8 @@ def instrucciones_mcp() -> str:
 
 def consultar_mcp_python_docs(herramienta: str, argumentos: dict) -> str:
     """Llama al servidor MCP sin LLM (interfaz y notebook). Corre en otro hilo para funcionar
-    también dentro de Jupyter o Streamlit, que pueden tener un event loop activo."""
+    también dentro de Jupyter o Streamlit, que pueden tener un event loop activo. Tiene un tiempo límite
+    para que un cuelgue al abrir o cerrar la conexión no bloquee la celda indefinidamente."""
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
 
@@ -271,8 +274,21 @@ def consultar_mcp_python_docs(herramienta: str, argumentos: dict) -> str:
                 resultado = await sesion.call_tool(herramienta, argumentos)
                 return "\n".join(getattr(c, "text", "") for c in resultado.content)
 
-    with ThreadPoolExecutor(max_workers=1) as ejecutor:
-        texto = ejecutor.submit(asyncio.run, _llamar()).result()
+    async def _con_limite() -> str:
+        return await asyncio.wait_for(_llamar(), timeout=TIMEOUT_MCP_S)
+
+    # Sin "with": si la conexión quedara colgada, salir del bloque esperaría al hilo para siempre
+    ejecutor = ThreadPoolExecutor(max_workers=1)
+    try:
+        texto = ejecutor.submit(asyncio.run, _con_limite()).result(timeout=TIMEOUT_MCP_S + 15)
+    except (TimeoutError, FuturesTimeoutError) as exc:
+        registrar("mcp_directo_timeout", herramienta=herramienta, segundos=TIMEOUT_MCP_S)
+        raise RuntimeError(
+            f"El servidor MCP python-docs no respondió en {TIMEOUT_MCP_S} s. Revisa logs/mcp_stderr.log y que "
+            "funcione `python-docs-mcp-server doctor`."
+        ) from exc
+    finally:
+        ejecutor.shutdown(wait=False, cancel_futures=True)
     registrar("mcp_directo", herramienta=herramienta, argumentos=argumentos, caracteres=len(texto))
     return texto
 
