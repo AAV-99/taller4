@@ -9,7 +9,6 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from crewai import LLM
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,13 +21,15 @@ TRACE_FILE = LOGS_DIR / "trace.jsonl"
 load_dotenv(ROOT / ".env")
 
 # Plan gratuito de Gemini: ~20 solicitudes/día POR MODELO. El tutor usa MODEL y los agentes de apoyo
-# (estudiante y evaluador) usan MODEL_APOYO, un modelo lite con cuota independiente. Si un modelo agota su
-# cuota diaria (429) o sigue saturado (503), el agente pasa al siguiente de MODEL_RESPALDO y reintenta.
+# (estudiante y evaluador) usan MODEL_APOYO, un modelo lite con cuota independiente. Detrás de ambos está la
+# cadena MODEL_RESPALDO: modelos.py la recorre solicitud por solicitud ante 429 (cuota) o 503 (saturado).
+# Solo nombres con versión: CrewAI deduce de ella si el modelo admite herramientas y razonamiento.
 MODEL = os.getenv("MODEL", "gemini/gemini-3.7-flash")
 # Cadena de respaldo, en orden, separada por comas
 MODELOS_RESPALDO = [m.strip() for m in os.getenv(
     "MODEL_RESPALDO",
-    "gemini/gemini-3.8-flash,gemini/gemini-3-flash-preview,gemini/gemini-3.1-flash-lite,gemini/gemini-flash-lite-latest",
+    "gemini/gemini-3.8-flash,gemini/gemini-3.6-flash,gemini/gemini-3.5-flash,gemini/gemini-3-flash-preview,"
+    "gemini/gemini-3.1-flash-lite,gemini/gemini-3.5-flash-lite",
 ).split(",") if m.strip()]
 MODEL_APOYO = os.getenv("MODEL_APOYO", "gemini/gemini-3.5-flash-lite")
 # Paneles detallados de CrewAI en consola (1 = activos). Apagados por defecto: la traza queda en logs/trace.jsonl
@@ -43,10 +44,6 @@ if not VERBOSE:
 # Límite de solicitudes por minuto por agente (plan gratuito de Gemini: 5 RPM)
 MAX_RPM = int(os.getenv("PROF_AGENT_MAX_RPM", "4"))
 
-
-def crear_llm(temperature: float = 0.3, modelo: str = MODEL) -> LLM:
-    # max_tokens incluye los tokens de razonamiento de Gemini; con valores bajos la respuesta se corta.
-    return LLM(model=modelo, temperature=temperature, max_tokens=8000, max_retries=4, timeout=120)
 
 
 def api_key_configurada() -> bool:

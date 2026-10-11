@@ -32,13 +32,14 @@ prof_agent/
 ├── src/prof_agent/
 │   ├── config/agents.yaml, tasks.yaml   # roles y plantillas de prompt
 │   ├── main.py            # ProfAgentFlow + comandos de consola
-│   ├── agents.py          # construcción de agentes desde YAML (+ reintentos ante 503)
+│   ├── agents.py          # construcción de agentes desde YAML
+│   ├── modelos.py         # LLM de Gemini con cadena de respaldo por solicitud (429 / 503)
 │   ├── tutoria.py         # turno del Profesor y turno del Estudiante
 │   ├── acompanamiento.py  # Escenario 3: conversación AgenteEstudiante ↔ AgenteProfesor
 │   ├── conocimiento.py    # herramientas: RagTool, ScrapeWebsiteTool por página y cliente MCP
 │   ├── guardrail.py       # regla «no entregar la solución»
 │   ├── memory.py          # memoria JSON por estudiante
-│   ├── settings.py        # rutas, datos, modelos de Gemini y traza (logs/trace.jsonl)
+│   ├── settings.py        # rutas, datos, configuración de modelos y traza (logs/trace.jsonl)
 │   ├── evaluation.py      # casos de prueba
 │   └── mcp_server.py      # servidor MCP
 ├── front/app.py           # interfaz Streamlit
@@ -64,15 +65,25 @@ en cada arranque.
 Si no quieres usar el servidor MCP externo, pon `PROF_AGENT_MCP_PYTHON_DOCS=0` en `.env` y el tutor trabaja solo con
 el corpus local y las 8 páginas del temario.
 
-El AgenteProfesor usa `gemini/gemini-3.7-flash` (`MODEL`). Si su cuota diaria se agota (error 429), o sigue saturado (503), pasa solo
-al siguiente modelo de `MODEL_RESPALDO` (por defecto `gemini-3.8-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite` y `gemini-flash-lite-latest`) y reintenta. El estudiante y el juez
-usan `gemini/gemini-3.5-flash-lite` (`MODEL_APOYO`). Los tres se cambian en `.env`.
+El AgenteProfesor empieza con `gemini/gemini-3.7-flash` (`MODEL`) y el estudiante y el juez con
+`gemini/gemini-3.5-flash-lite` (`MODEL_APOYO`). Detrás de ambos está la cadena `MODEL_RESPALDO` (por defecto
+`gemini-3.8-flash`, `3.6-flash`, `3.5-flash`, `3-flash-preview`, `3.1-flash-lite` y `3.5-flash-lite`; para los agentes de
+apoyo se prueban antes los *lite*). Todo se cambia en `.env`.
+
+`modelos.py` protege **cada solicitud** al LLM, sin repetir el resto del turno del agente:
+
+| Error de Gemini | Qué hace |
+|---|---|
+| 429 por minuto | Espera lo que indica Gemini (`retryDelay`) y reintenta con el mismo modelo |
+| 429 por día (cuota agotada) | Repite la solicitud con el siguiente modelo de la cadena y salta ese modelo en el resto del proceso |
+| 503 (modelo saturado) | Reintenta tras 5, 15 y 30 s; si persiste, pasa al siguiente modelo solo para esa solicitud |
+| Ningún modelo disponible | `CuotaAgotadaError` con un mensaje claro |
+
+Cada cambio de modelo queda en `logs/trace.jsonl` como `cambio_modelo`.
 
 > ⚠️ **Plan gratuito de Gemini: ~20 solicitudes al día por modelo.** Un turno del tutor gasta 2-3 solicitudes (la consulta
-> a su única fuente del turno + la respuesta). La evaluación gasta unas 10-12 del modelo del tutor y el notebook completo
-> (escenario 3 con Kevin en 2 turnos + 3 casos de prueba) unas 14-18. Si se agotan los dos modelos, cambia
-> `MODEL` por otro modelo con cuota disponible (p. ej. `gemini/gemini-3.1-flash-lite`) o espera a que se reinicie la cuota.
-> Los errores 503 (modelo saturado) se reintentan solos.
+> a su única fuente del turno + la respuesta). El notebook completo (escenario 3 con Kevin en 2 turnos + 3 casos de
+> prueba) gasta unas 14-18 entre todos los modelos de la cadena.
 
 ## Uso
 
